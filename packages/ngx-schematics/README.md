@@ -159,6 +159,7 @@ Creates a new, generic Library project in the current workspace
 | `--skip-install`      | Do not install dependency packages.                                                        | `boolean`  | `false`       |
 | `--skip-ts-config`    | Do not update "tsconfig.json" to add a path mapping for the new library.                   | `boolean`  | `false`       |
 | `--skip-metadata`     | Do not generate metadata for the new library.                                              | `boolean`  | `false`       |
+| `--skip-shared`       | Do not generate shared files (action types) for the new library.                           | `boolean`  | `false`       |
 
 #### **Usage:**
 
@@ -279,7 +280,7 @@ Creates a new, generic Wizard Step in the given or default project
 #### **Usage:**
 
 ```
-ng generate wizard-create-edit [name]
+ng generate wizard-step [name]
 ```
 
 ### **page**

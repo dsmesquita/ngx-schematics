@@ -36,7 +36,8 @@ describe('Generate Library', () => {
     skipPackageJson: false,
     skipTsConfig: false,
     skipInstall: false,
-    skipMetadata: false
+    skipMetadata: false,
+    skipShared: false
   };
 
   const fixturesPath = `${__dirname}/fixtures`;
@@ -183,6 +184,103 @@ describe('Generate Library', () => {
             `projects/${libraryOptions.name}/metadata/src/public-api.ts`,
             `projects/${libraryOptions.name}/metadata/src/lib/${libraryOptions.name}-metadata.module.ts`,
             `projects/${libraryOptions.name}/metadata/src/lib/${libraryOptions.name}-metadata.service.ts`
+          ])
+        );
+      });
+
+      it('should update the app.config.ts', async () => {
+        const options = { ...libraryOptions };
+
+        const tree = await schematicRunner.runSchematic('library', options, appTree);
+        expect(tree.readText(`/projects/app/src/app/app.config.ts`)).toContain(`provideTestLib()`);
+      });
+    });
+
+    describe('should create the shared secundary entry point', () => {
+      it('should create the library files', async () => {
+        const tree = await schematicRunner.runSchematic('library', libraryOptions, appTree);
+        const files = getAllFilesFromDir(`${libPath}/shared`, tree);
+
+        expect(files).toEqual(
+          expect.arrayContaining([
+            `${libPath}/shared/ng-package.json`,
+            `${libPath}/shared/src/public-api.ts`,
+            `${libPath}/shared/src/lib/action-types.ts`
+          ])
+        );
+      });
+
+      it('should create a ng-package.json in the shared entry-point', async () => {
+        const tree = await schematicRunner.runSchematic('library', libraryOptions, appTree);
+
+        const actual = tree.readText(`${libPath}/shared/ng-package.json`);
+        const expected = readFileSync(`${fixturesPath}/shared/ng-package.json`, {
+          encoding: 'utf-8'
+        });
+
+        expect(normalize(actual)).toEqual(normalize(expected));
+      });
+
+      it('should create a public-api in the shared entry-point', async () => {
+        const tree = await schematicRunner.runSchematic('library', libraryOptions, appTree);
+
+        const actual = tree.readText(`${libPath}/shared/src/public-api.ts`);
+        const expected = readFileSync(`${fixturesPath}/shared/src/public-api.ts`, {
+          encoding: 'utf-8'
+        });
+
+        expect(normalize(actual)).toEqual(normalize(expected));
+      });
+
+      it('should create a action-types util in the shared entry-point', async () => {
+        const tree = await schematicRunner.runSchematic('library', libraryOptions, appTree);
+
+        const actual = tree.readText(
+          `${libPath}/shared/src/lib/action-types.ts`
+        );
+        const expected = readFileSync(
+          `${fixturesPath}//shared/src/lib/action-types.ts`,
+          {
+            encoding: 'utf-8'
+          }
+        );
+
+        expect(normalize(actual)).toEqual(normalize(expected));
+      });
+
+      it(`should add paths mapping to empty tsconfig`, async () => {
+        const tree = await schematicRunner.runSchematic('library', libraryOptions, appTree);
+
+        const tsConfigJson = getFileContent(tree, 'tsconfig.json');
+        expect(tsConfigJson.compilerOptions.paths[`${libraryOptions.name}/shared`]).toEqual([
+          `./dist/${libraryOptions.name}/shared`
+        ]);
+      });
+
+      it(`should not modify the file when --skipTsConfig`, async () => {
+        const tree = await schematicRunner.runSchematic(
+          'library',
+          {
+            name: 'test-skip-tsconfig',
+            skipTsConfig: true
+          },
+          appTree
+        );
+
+        const tsConfigJson = getFileContent(tree, 'tsconfig.json');
+        expect(tsConfigJson.compilerOptions.paths).toBeUndefined();
+      });
+
+      it('should not add the shared sub-entry', async () => {
+        const options = { ...libraryOptions, skipShared: true };
+
+        const tree = await schematicRunner.runSchematic('library', options, appTree);
+        const files = getAllFilesFromDir(`projects/${libraryOptions.name}`, tree);
+        expect(files).not.toEqual(
+          expect.arrayContaining([
+            `projects/${libraryOptions.name}/shared/ng-package.json`,
+            `projects/${libraryOptions.name}/shared/src/public-api.ts`,
+            `projects/${libraryOptions.name}/shared/src/lib/action-types.ts`
           ])
         );
       });

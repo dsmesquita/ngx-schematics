@@ -49,6 +49,11 @@
       "type": "boolean",
       "default": false,
       "description": "Do not generate metadata files."
+    },
+    "skipShared": {
+      "type": "boolean",
+      "default": false,
+      "description": "Do not generate action types' files."
     }
   },
   "required": ["name"]

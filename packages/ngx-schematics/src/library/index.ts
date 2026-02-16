@@ -113,7 +113,7 @@ function createMetadataSubEntry(options: { name: string; skipTsConfig?: boolean 
     const distRoot = `./dist/${folderName}/metadata`;
     const namePrefix = options.name.replace(/^cmf-/, '');
 
-    const templateSource = apply(url('./files'), [
+    const templateSource = apply(url('./files/metadata'), [
       applyTemplates({
         ...strings,
         fullName: options.name,
@@ -123,6 +123,43 @@ function createMetadataSubEntry(options: { name: string; skipTsConfig?: boolean 
         distRoot: join(basename(normalize(project.root)), 'metadata')
       }),
       move(join(normalize(project.root), 'metadata'))
+    ]);
+
+    return chain([
+      mergeWith(templateSource),
+      options.skipTsConfig
+        ? noop()
+        : updateTsConfig([{ path: ['compilerOptions', 'paths', packageName], value: [distRoot] }]),
+      updateAppModule({ packageName, namePrefix }),
+      updateAppConfig({ packageName, namePrefix })
+    ]);
+  };
+}
+
+function createSharedSubEntry(options: { name: string; skipTsConfig?: boolean }) {
+  return async (host: Tree) => {
+    const workspace = await readWorkspace(host);
+    const project = workspace.projects.get(options.name);
+
+    if (!project) {
+      return;
+    }
+
+    const packageName = `${options.name}/shared`;
+    const folderName = basename(normalize(project.root));
+    const distRoot = `./dist/${folderName}/shared`;
+    const namePrefix = options.name.replace(/^cmf-/, '');
+
+    const templateSource = apply(url('./files/shared'), [
+      applyTemplates({
+        ...strings,
+        fullName: options.name,
+        name: namePrefix,
+        entryFile: 'public-api',
+        relativePathToWorkspaceRoot: relativeToRoot(join(normalize(project.root), 'shared')),
+        distRoot: join(basename(normalize(project.root)), 'shared')
+      }),
+      move(join(normalize(project.root), 'shared'))
     ]);
 
     return chain([
@@ -154,6 +191,8 @@ export default function (_options: Schema): Rule {
 
     const skipMetadata = _options.skipMetadata;
     delete _options.skipMetadata;
+    const skipShared = _options.skipShared;
+    delete _options.skipShared;
 
     return chain([
       externalSchematic(lint ?? '@schematics/angular', 'library', _options),
@@ -165,7 +204,8 @@ export default function (_options: Schema): Rule {
         _options.name
       ),
       updateNgPackageJson(_options),
-      !skipMetadata ? createMetadataSubEntry(_options) : noop()
+      !skipMetadata ? createMetadataSubEntry(_options) : noop(),
+      !skipShared ? createSharedSubEntry(_options) : noop()
     ]);
   };
 }
